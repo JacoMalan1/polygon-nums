@@ -1,6 +1,6 @@
-#Polygon Numbers
+# Polygon Numbers
 
-##Description
+## Description
 
 This is a program to find the overlap in polygon-number roots.
 
@@ -13,6 +13,6 @@ For example:
 
 	This program finds those overlaps.
 
-##Building
+## Building
 
 * All you have to do to build this program is run `cargo build --release`, make sure you have cargo installed though.
