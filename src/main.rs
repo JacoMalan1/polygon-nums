@@ -1,12 +1,8 @@
 use std::io::*;
-
-// na : an(n+b) / 2   = (an^2 + abn) / c   a  b     n  b
-// 3a : 1n(n+1) / 2   = (n^2 + n) / 2      1  1     3  1
-// 4a : 2n(n+0) / 2   = (n^2 + 0n) / 1     2  0     4  0
-// 5a : 3n(n-1) / 2   = (3n^2 - 3n) / 2    3 -1     5 -1
-// 6a : 4n(n-1/2) / 2 = (2n^2 - n) / 1     4 -15/30   6 -0.5
-// 7a : 5n(n-3/5) / 2 = (5n^2 - 3n) / 2    5 -18/30   7 -0.6
-// 8a : 6n(n-2/3) / 2 = (3n^2 - 2n) / 1    6 -20/30   8 -0.6*
+use std::thread::*;
+use std::io::Write;
+use std::io;
+use std::sync::*;
 
 struct Vars { a: f64, b: f64 }
 
@@ -22,7 +18,7 @@ fn get_input(query: &str) -> String {
 
 }
 
-fn inv_poly_num(n: i32, q: f64) -> f64 {
+fn inv_poly_num(n: i64, q: f64) -> f64 {
 
     let v: Vars = get_vars(n);
     let a = v.a;
@@ -57,28 +53,7 @@ fn all_int(nums: &Vec<f64>) -> bool {
 
 }
 
-fn search(nums: &Vec<i32>) {
-
-    let mut cur_index: f64 = 5.0;
-    loop {
-
-        cur_index += 1.0;
-        let mut shapes: Vec<f64> = vec![];
-        for n in nums {
-
-            shapes.push(inv_poly_num(*n, cur_index));
-
-        }
-
-        if all_int(&shapes) {
-            println!("Found overlap at: {}", cur_index);
-        }
-
-    }
-
-}
-
-fn get_vars(n: i32) -> Vars {
+fn get_vars(n: i64) -> Vars {
 
     let nf = n as f64;
     let a = (nf - 2.0) / 2.0;
@@ -94,7 +69,7 @@ fn main() {
 
     // println!("{0}\n{1}", inv_poly_num(3, 36.0), inv_poly_num(4, 36.0));
 
-    let mut nums: Vec<i32> = vec![];
+    let mut nums = Arc::new(Mutex::new(vec![]));
 
     println!("This program will test polygon-numbers with the number of sides 'n'\nPlease enter a list of n's to test for overlap...");
 
@@ -112,10 +87,10 @@ fn main() {
 
         for n in &snums {
 
-            match n.parse::<i32>() {
+            match n.parse::<i64>() {
 
                 Err(e) => { println!("Error in number {}: {}\nPlease try again...", n, e); continue; },
-                Ok(val) => nums.push(val)
+                Ok(val) => { let mut ns = nums.lock().unwrap(); ns.push(val); }
 
             }
 
@@ -125,11 +100,66 @@ fn main() {
 
     }
 
-    println!("Starting thread...");
-    let handle = std::thread::spawn(move || search(&nums));
-    match handle.join() {
-        Err(x) => { println!("Error: {}", stringify!(x)); return; },
-        Ok(_) => return
+    println!("Starting threads...");
+    let num_threads = 4;
+    let mut t_counter = Arc::new(Mutex::new(0));
+
+    #[must_use]
+    let mut handles = vec![];
+
+    for i in 0..num_threads {
+
+        let nums = Arc::clone(&nums);
+        let t_counter = Arc::clone(&t_counter);
+        #[must_use]
+        let handle = spawn(move || {
+
+            println!("Starting thread {}...", i);
+
+            let mut shapes: Vec<f64> = vec![];
+            let mut tc = t_counter.lock().unwrap();
+            let tt = *tc;
+            *tc += 1;
+
+            let mut counter: i64 = 0;
+            let mut cur_index: i64 = tt * 50000 + num_threads * counter * 50000;
+            let mut s_index = cur_index;
+            loop {
+
+                cur_index += 1;
+                let mut shapes: Vec<f64> = vec![];
+                let mut ns = nums.lock().unwrap();
+                for n in &*ns {
+
+                    shapes.push(inv_poly_num(*n, cur_index as f64));
+
+                }
+
+                if all_int(&shapes) {
+                    let f = io::stdout();
+                    let mut sf = f.lock();
+                    writeln!(&mut sf, "[{}]: Found overlap at: {}", i, cur_index);
+                }
+
+                if (cur_index - s_index >= 50000) {
+                    counter += 1;
+                    cur_index = tt * 50000 + num_threads * counter * 50000;
+                    s_index = cur_index;
+
+                    let f = io::stdout();
+                    let mut sf = f.lock();
+
+                }
+
+            }
+        });
+
+        handles.push(handle);
+
+    }
+
+    for h in handles {
+        h.join().unwrap();
     }
 
 }
