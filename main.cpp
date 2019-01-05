@@ -162,7 +162,9 @@ int main(int argc, const char** argv) {
     for (int i = 0; i < t_num; i++) {
         thread* handle = new thread(doWork);
         handles.emplace_back(handle);
+        while (!mu.try_lock()) {}
         threads++;
+        mu.unlock();
     }
 
     for (thread* t : handles) {
