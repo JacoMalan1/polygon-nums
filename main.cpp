@@ -10,13 +10,14 @@ using namespace std;
 
 struct vars {
     mpf_class a, b;
+
 };
 
 mutex mu;
 int threads;
 vector<int> nums;
 
-vars* get_vars(mpz_class n) {
+vars* get_vars(const mpz_class& n) {
 
     mpf_class a = ((mpf_class)n - 2.0f) / 2.0f;
     mpf_class b = (-(mpf_class)n + 4.0f) / 2.0f;
@@ -61,9 +62,9 @@ bool all_int(const vector<mpf_class>& nums) {
 
 }
 
-mpf_class inv_poly_num(mpz_class n, mpf_class q) {
+mpf_class& inv_poly_num(const mpz_class& n, const mpf_class& q) {
 
-    auto v = get_vars(n);
+    vars* v = get_vars(n);
     mpf_class a = v->a;
     mpf_class b = v->b;
 
@@ -71,13 +72,18 @@ mpf_class inv_poly_num(mpz_class n, mpf_class q) {
     mpf_class j =  sqrt(b * b + 4.0f * a * q);
     mpf_class k = 2.0f * a;
 
-    mpf_class ans1 = (i + j) / k;
-    mpf_class ans2 = (i - j) / k;
+    mpf_class* ans1 = new mpf_class();
+    mpf_class* ans2 = new mpf_class();
+
+    *ans1 = (i + j) / k;
+    *ans2 = (i - j) / k;
+
+    delete v;
 
     if (ans1 >= ans2) {
-        return ans1;
+        return *ans1;
     } else {
-        return ans2;
+        return *ans2;
     }
 
 }
@@ -124,6 +130,10 @@ void doWork() {
             msg += "Found overlap at: ";
             msg += cur_index.get_str();
             print_sync(msg);
+        } else {
+            for (mpf_class f : shapes) {
+                ~f;
+            }
         }
 
     }
