@@ -4,21 +4,22 @@
 #include <math.h>
 #include <sstream>
 #include <mutex>
+#include <gmpxx.h>
 
 using namespace std;
 
 struct vars {
-    float a, b;
+    mpf_class a, b;
 };
 
 mutex mu;
 int threads;
 vector<int> nums;
 
-vars* get_vars(int n) {
+vars* get_vars(mpz_class n) {
 
-    float a = ((float)n - 2.0f) / 2.0f;
-    float b = (-(float)n + 4.0f) / 2.0f;
+    mpf_class a = ((mpf_class)n - 2.0f) / 2.0f;
+    mpf_class b = (-(mpf_class)n + 4.0f) / 2.0f;
 
     auto v = new vars();
     v->a = a;
@@ -44,12 +45,12 @@ vector<string>* split(string input_s, char delim) {
 
 }
 
-bool all_int(const vector<float>& nums) {
+bool all_int(const vector<mpf_class>& nums) {
 
     bool res = true;
-    for (float f : nums) {
+    for (mpf_class f : nums) {
 
-        if (f != (float)round(f)) {
+        if (f != ceil(f)) {
             res = false;
             break;
         }
@@ -60,18 +61,18 @@ bool all_int(const vector<float>& nums) {
 
 }
 
-float inv_poly_num(int n, float q) {
+mpf_class inv_poly_num(mpz_class n, mpf_class q) {
 
     auto v = get_vars(n);
-    float a = v->a;
-    float b = v->b;
+    mpf_class a = v->a;
+    mpf_class b = v->b;
 
-    float i = -b;
-    float j =  sqrt(b * b + 4.0f * a * q);
-    float k = 2.0f * a;
+    mpf_class i = -b;
+    mpf_class j =  sqrt(b * b + 4.0f * a * q);
+    mpf_class k = 2.0f * a;
 
-    float ans1 = (i + j) / k;
-    float ans2 = (i - j) / k;
+    mpf_class ans1 = (i + j) / k;
+    mpf_class ans2 = (i - j) / k;
 
     if (ans1 >= ans2) {
         return ans1;
@@ -103,8 +104,8 @@ void doWork() {
     msg += " started...";
     print_sync(msg);
 
-    unsigned long offset = 5 * (long)pow(10, 5);
-    unsigned long cur_index = offset * t_id;
+    mpz_class offset = 5 * pow(10, 5);
+    mpz_class cur_index = offset * t_id;
     while (true) {
 
         cur_index++;
@@ -112,16 +113,16 @@ void doWork() {
             cur_index += threads * offset;
         }
 
-        vector<float> shapes;
+        vector<mpf_class> shapes;
 
         for (int n : nums) {
-            shapes.emplace_back(inv_poly_num(n, (float)cur_index));
+            shapes.emplace_back(inv_poly_num(n, cur_index));
         }
 
         if (all_int(shapes)) {
             string msg;
             msg += "Found overlap at: ";
-            msg += to_string(cur_index);
+            msg += cur_index.get_str();
             print_sync(msg);
         }
 
@@ -131,7 +132,7 @@ void doWork() {
 
 int main(int argc, const char** argv) {
 
-    int t_num = 2;
+   int t_num = 2;
     if (argc > 1) {
         string s = argv[1];
         stringstream stream(s);
