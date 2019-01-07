@@ -1,1 +1,5 @@
 shape_nums
+.idea
+
+cmake-build-debug
+cdmake-build-release

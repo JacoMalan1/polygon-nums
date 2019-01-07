@@ -1,0 +1,1 @@
+/usr/bin/clang++  -O3 -DNDEBUG   CMakeFiles/shape_nums.dir/main.cpp.o  -o shape_nums -lpthread -lgmp -lgmpxx 

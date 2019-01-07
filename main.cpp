@@ -6,6 +6,8 @@
 #include <mutex>
 #include <gmpxx.h>
 
+#define DEBUG false
+
 using namespace std;
 
 struct vars {
@@ -29,15 +31,15 @@ vars* get_vars(const mpz_class& n) {
 
 }
 
-vector<string>* split(string input_s, char delim) {
+vector<string> split(string input_s, char delim) {
 
-    auto snums = new vector<string>();
+    vector<string> snums = vector<string>();
 
-    int pos = 0;
+    unsigned long pos = 0;
     while (pos != -1) {
 
-        pos = input_s.find(',');
-        snums->emplace_back(input_s.substr(0, pos));
+        pos = input_s.find(delim);
+        snums.emplace_back(input_s.substr(0, pos));
         input_s.erase(0, pos + 1);
 
     }
@@ -46,12 +48,12 @@ vector<string>* split(string input_s, char delim) {
 
 }
 
-bool all_int(const vector<mpf_class>& nums) {
+bool all_int(const vector<mpf_class*>& nums) {
 
     bool res = true;
-    for (mpf_class f : nums) {
+    for (mpf_class* f : nums) {
 
-        if (f != ceil(f)) {
+        if (*f != ceil(*f)) {
             res = false;
             break;
         }
@@ -62,7 +64,7 @@ bool all_int(const vector<mpf_class>& nums) {
 
 }
 
-mpf_class& inv_poly_num(const mpz_class& n, const mpf_class& q) {
+mpf_class* inv_poly_num(const mpz_class& n, const mpf_class& q) { // mem leak
 
     vars* v = get_vars(n);
     mpf_class a = v->a;
@@ -72,8 +74,8 @@ mpf_class& inv_poly_num(const mpz_class& n, const mpf_class& q) {
     mpf_class j =  sqrt(b * b + 4.0f * a * q);
     mpf_class k = 2.0f * a;
 
-    mpf_class* ans1 = new mpf_class();
-    mpf_class* ans2 = new mpf_class();
+    auto ans1 = new mpf_class();
+    auto ans2 = new mpf_class();
 
     *ans1 = (i + j) / k;
     *ans2 = (i - j) / k;
@@ -81,28 +83,32 @@ mpf_class& inv_poly_num(const mpz_class& n, const mpf_class& q) {
     delete v;
 
     if (ans1 >= ans2) {
-        return *ans1;
+        delete ans2;
+        return ans1;
     } else {
-        return *ans2;
+        delete ans1;
+        return ans2;
     }
 
 }
 
-void print_sync(string msg) {
+void print_sync(const string& msg) {
 
-    while (!mu.try_lock()) {}
+    lock_guard<mutex> lg(mu);
 
     cout << msg << endl;
-    cout.flush();
-    mu.unlock();
 
 }
 
 void doWork() {
 
-    while (mu.try_lock()) {}
-    int t_id = threads;
-    mu.unlock();
+    int t_id;
+    {
+        lock_guard<mutex> lock(mu);
+        t_id = threads;
+        threads++;
+        mu.unlock();
+    }
 
     string msg;
     msg += "Thread ";
@@ -112,29 +118,35 @@ void doWork() {
 
     mpz_class offset = 5 * pow(10, 5);
     mpz_class cur_index = offset * t_id;
+    if (DEBUG)
+        print_sync("Thread " + to_string(t_id) + " starting at: " + cur_index.get_str());
     while (true) {
 
         cur_index++;
         if (cur_index % offset == 0) {
             cur_index += threads * offset;
+            if (DEBUG)
+                print_sync("[" + to_string(t_id) + "]: advancing to " + cur_index.get_str());
         }
 
-        vector<mpf_class> shapes;
+        auto shapes = new vector<mpf_class*>();
 
         for (int n : nums) {
-            shapes.emplace_back(inv_poly_num(n, cur_index));
+            shapes->emplace_back(inv_poly_num(n, cur_index)); // Memory leak
         }
 
-        if (all_int(shapes)) {
-            string msg;
-            msg += "Found overlap at: ";
-            msg += cur_index.get_str();
-            print_sync(msg);
-        } else {
-            for (mpf_class f : shapes) {
-                ~f;
-            }
+        if (all_int(*shapes)) {
+            string alert;
+            alert += "Found overlap at: ";
+            alert += cur_index.get_str();
+            print_sync(alert);
         }
+
+        for (mpf_class* f : *shapes) {
+            delete f;
+        }
+
+        delete shapes;
 
     }
 
@@ -157,9 +169,9 @@ int main(int argc, const char** argv) {
     string input_s;
     cin >> input_s;
 
-    vector<string> snums = *split(input_s, ',');
+    vector<string> snums = split(input_s, ',');
 
-    for (string snum : snums) {
+    for (const string& snum : snums) {
 
         int num;
         stringstream stream(snum);
@@ -171,16 +183,12 @@ int main(int argc, const char** argv) {
     threads = 0;
     vector<thread*> handles;
     for (int i = 0; i < t_num; i++) {
-        thread* handle = new thread(doWork);
+        auto handle = new thread(doWork);
         handles.emplace_back(handle);
-        while (!mu.try_lock()) {}
-        threads++;
-        mu.unlock();
     }
 
-    for (thread* t : handles) {
+    for (thread* t : handles)
         t->join();
-    }
 
     return 0;
 
