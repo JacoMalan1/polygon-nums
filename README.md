@@ -15,4 +15,6 @@ For example:
 
 ## Building
 
-* All you have to do to build this program is run `cargo build --release`, make sure you have cargo installed though.
+* First, you need to create the CMake build files. To do this, insure that you have CMake installed and run the following command in the root project directory: `cmake .`.
+* Next, you need to tell CMake to build the program, To do this, simply run the following command: `cmake --build . --target all`.
+* Finally, to run the program just run the newly-generated executable file called "shape_nums" or "shape_nums.exe" in a terminal or command prompt.
