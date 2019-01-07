@@ -1,3 +1,0 @@
-/home/jacom/Code/C++/ShapeNums/cmake-build-release/CMakeFiles/rebuild_cache.dir
-/home/jacom/Code/C++/ShapeNums/cmake-build-release/CMakeFiles/shape_nums.dir
-/home/jacom/Code/C++/ShapeNums/cmake-build-release/CMakeFiles/edit_cache.dir
