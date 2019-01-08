@@ -16,6 +16,7 @@ struct vars {
 mutex mu;
 int threads;
 vector<int> nums;
+mpz_class* index_start;
 
 vars* get_vars(int n) {
 
@@ -119,7 +120,7 @@ void doWork() {
 
     mpz_ui_pow_ui(offset->get_mpz_t(), 10, 5);
     *offset *= 5;
-    *cur_index = *offset * t_id;
+    *cur_index = (*index_start) + (*offset) * t_id;
     if (DEBUG)
         print_sync("Thread " + to_string(t_id) + " starting at: " + cur_index->get_str());
     while (true) {
@@ -173,6 +174,15 @@ int main(int argc, const char** argv) {
 
     string input_s;
     cin >> input_s;
+
+    index_start = new mpz_class();
+    cout << "Please enter starting index 'q' (interpreted as 10^q): ";
+    string power_s;
+    cin >> power_s;
+    int power;
+    stringstream stream(power_s);
+    stream >> power;
+    mpz_ui_pow_ui(index_start->get_mpz_t(), 10, power);
 
     vector<string> snums = split(input_s, ',');
 
