@@ -1,7 +1,6 @@
 #include <iostream>
 #include <vector>
 #include <thread>
-#include <math.h>
 #include <sstream>
 #include <mutex>
 #include <gmpxx.h>
@@ -11,18 +10,17 @@
 using namespace std;
 
 struct vars {
-    mpf_class a, b;
-
+    float a, b;
 };
 
 mutex mu;
 int threads;
 vector<int> nums;
 
-vars* get_vars(const mpz_class& n) {
+vars* get_vars(int n) {
 
-    mpf_class a = ((mpf_class)n - 2.0f) / 2.0f;
-    mpf_class b = (-(mpf_class)n + 4.0f) / 2.0f;
+    float a = ((float)n - 2.0f) / 2.0f;
+    float b = (-(float)n + 4.0f) / 2.0f;
 
     auto v = new vars();
     v->a = a;
@@ -64,14 +62,14 @@ bool all_int(const vector<mpf_class*>& nums) {
 
 }
 
-mpf_class* inv_poly_num(const mpz_class& n, const mpf_class& q) { // mem leak
+mpf_class* inv_poly_num(int n, mpz_class* q) { // mem leak
 
     vars* v = get_vars(n);
     mpf_class a = v->a;
     mpf_class b = v->b;
 
     mpf_class i = -b;
-    mpf_class j =  sqrt(b * b + 4.0f * a * q);
+    mpf_class j =  sqrt(b * b + 4.0f * a * (*q));
     mpf_class k = 2.0f * a;
 
     auto ans1 = new mpf_class();
@@ -116,17 +114,21 @@ void doWork() {
     msg += " started...";
     print_sync(msg);
 
-    mpz_class offset = 5 * pow(10, 5);
-    mpz_class cur_index = offset * t_id;
+    auto offset = new mpz_class();
+    auto cur_index = new mpz_class();
+
+    mpz_ui_pow_ui(offset->get_mpz_t(), 10, 5);
+    *offset *= 5;
+    *cur_index = *offset * t_id;
     if (DEBUG)
-        print_sync("Thread " + to_string(t_id) + " starting at: " + cur_index.get_str());
+        print_sync("Thread " + to_string(t_id) + " starting at: " + cur_index->get_str());
     while (true) {
 
-        cur_index++;
-        if (cur_index % offset == 0) {
-            cur_index += threads * offset;
+        (*cur_index)++;
+        if (*cur_index % *offset == 0) {
+            *cur_index += threads * (*offset);
             if (DEBUG)
-                print_sync("[" + to_string(t_id) + "]: advancing to " + cur_index.get_str());
+                print_sync("[" + to_string(t_id) + "]: advancing to " + cur_index->get_str());
         }
 
         auto shapes = new vector<mpf_class*>();
@@ -138,7 +140,7 @@ void doWork() {
         if (all_int(*shapes)) {
             string alert;
             alert += "Found overlap at: ";
-            alert += cur_index.get_str();
+            alert += cur_index->get_str();
             print_sync(alert);
         }
 
@@ -149,6 +151,9 @@ void doWork() {
         delete shapes;
 
     }
+
+    delete cur_index;
+    delete offset;
 
 }
 
