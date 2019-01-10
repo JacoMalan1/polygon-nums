@@ -7,7 +7,14 @@
 #include <chrono>
 #include <gmpxx.h>
 
-#define DEBUG false
+#define DEBUG false // Debug flag
+
+// Color escape codes
+#define COLOR_ERROR "\u001b[31m"
+#define COLOR_ENDC "\u001b[0m"
+#define COLOR_WARN "\u001b[38:5:202m"
+#define COLOR_INFO "\u001b[92m"
+#define COLOR_ALERT "\u001b[38:5:198m"
 
 using namespace std;
 
@@ -20,11 +27,11 @@ int threads;
 vector<int> nums;
 mpz_class* index_start;
 
-void print_sync(const string& msg) {
+void print_sync(const string& msg, const char* color = "") {
 
     lock_guard<mutex> lg(mu);
 
-    cout << msg << endl;
+    cout << color << msg << COLOR_ENDC << endl;
 
 }
 
@@ -101,6 +108,15 @@ mpf_class* inv_poly_num(int n, mpz_class* q) { // mem leak
 
 }
 
+string get_input(string prompt) {
+
+    string input;
+    cout << prompt;
+    cin >> input;
+    return input;
+
+}
+
 void doWork() {
 
     int t_id;
@@ -115,7 +131,7 @@ void doWork() {
     msg += "Thread ";
     msg += to_string(t_id);
     msg += " started...";
-    print_sync(msg);
+    print_sync(msg, COLOR_INFO);
 
     auto offset = new mpz_class();
     auto cur_index = new mpz_class();
@@ -131,7 +147,7 @@ void doWork() {
         if (*cur_index % *offset == 0) {
             *cur_index += threads * (*offset);
             if (DEBUG)
-                print_sync("[" + to_string(t_id) + "]: advancing to " + cur_index->get_str());
+                print_sync("[" + to_string(t_id) + "]: advancing to " + cur_index->get_str(), COLOR_INFO);
         }
 
         auto shapes = new vector<mpf_class*>();
@@ -144,7 +160,7 @@ void doWork() {
             string alert;
             alert += "Found overlap at: ";
             alert += cur_index->get_str();
-            print_sync(alert);
+            print_sync(alert, COLOR_ALERT);
         }
 
         for (mpf_class* f : *shapes) {
@@ -160,39 +176,39 @@ void doWork() {
 
 }
 
+int to_int(string str) {
+
+    int res;
+    stringstream stream(str);
+    stream >> res;
+    return res;
+
+}
+
 int main(int argc, const char** argv) {
 
    int t_num = 2;
     if (argc > 1) {
         string s = argv[1];
-        stringstream stream(s);
-        stream >> t_num;
+        t_num = to_int(s);
     }
 
-    cout << "This program will test polygon-numbers with the number of sides of 'n'" << endl;
-    cout << "Please enter a list of n's to test for overlap..." << endl;
+    print_sync("This program will test polygon-numbers with the number of sides of 'n'", COLOR_INFO);
+    print_sync("Please enter a list of n's to test for overlap...", COLOR_INFO);
 
-    cout << "Please enter your list (seperated by \',\'): ";
-
-    string input_s;
-    cin >> input_s;
+    string input_s = get_input("Please enter your list (seperated by \',\'): ");
 
     index_start = new mpz_class();
-    cout << "Please enter starting index 'q' (interpreted as 10^q): ";
-    string power_s;
-    cin >> power_s;
-    int power;
-    stringstream stream(power_s);
-    stream >> power;
+    string power_s = get_input("Please enter starting index 'q' (interpreted as 10^q): ");
+
+    int power = to_int(power_s);
     mpz_ui_pow_ui(index_start->get_mpz_t(), 10, power);
 
     vector<string> snums = split(input_s, ',');
 
     for (const string& snum : snums) {
 
-        int num;
-        stringstream stream(snum);
-        stream >> num;
+        int num = to_int(snum);
         nums.emplace_back(num);
 
     }
@@ -202,7 +218,7 @@ int main(int argc, const char** argv) {
     int precision = pow(2, ceil(log2(power)) + 1);
 
     precision = (precision <= 64) ? 128 : precision;
-    cout << "Floating-point precision: " << precision << endl;
+    print_sync("Floating-point precision: " + to_string(precision), COLOR_WARN);
     mpf_set_default_prec(precision);
     this_thread::sleep_for(2s);
 
