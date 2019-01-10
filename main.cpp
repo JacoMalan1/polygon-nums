@@ -1,8 +1,10 @@
 #include <iostream>
 #include <vector>
 #include <thread>
+#include <math.h>
 #include <sstream>
 #include <mutex>
+#include <chrono>
 #include <gmpxx.h>
 
 #define DEBUG false
@@ -17,6 +19,14 @@ mutex mu;
 int threads;
 vector<int> nums;
 mpz_class* index_start;
+
+void print_sync(const string& msg) {
+
+    lock_guard<mutex> lg(mu);
+
+    cout << msg << endl;
+
+}
 
 vars* get_vars(int n) {
 
@@ -52,7 +62,7 @@ bool all_int(const vector<mpf_class*>& nums) {
     bool res = true;
     for (mpf_class* f : nums) {
 
-        if (*f != ceil(*f)) {
+        if (*f != trunc(*f)) {
             res = false;
             break;
         }
@@ -88,14 +98,6 @@ mpf_class* inv_poly_num(int n, mpz_class* q) { // mem leak
         delete ans1;
         return ans2;
     }
-
-}
-
-void print_sync(const string& msg) {
-
-    lock_guard<mutex> lg(mu);
-
-    cout << msg << endl;
 
 }
 
@@ -197,6 +199,13 @@ int main(int argc, const char** argv) {
 
     threads = 0;
     vector<thread*> handles;
+    int precision = pow(2, ceil(log2(power)) + 1);
+
+    precision = (precision <= 64) ? 128 : precision;
+    cout << "Floating-point precision: " << precision << endl;
+    mpf_set_default_prec(precision);
+    this_thread::sleep_for(2s);
+
     for (int i = 0; i < t_num; i++) {
         auto handle = new thread(doWork);
         handles.emplace_back(handle);
